@@ -1,7 +1,7 @@
 import { IconName } from '@fortawesome/fontawesome-svg-core';
 import { ServiceError, StatusObject } from '@grpc/grpc-js';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import React, { FC, Fragment, useEffect, useRef, useState } from 'react';
+import React, { FC, Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Button,
   DropIndicator,
@@ -79,6 +79,7 @@ import {
   CreateRequestType,
   useRequestGroupMetaPatcher,
   useRequestMetaPatcher,
+  useRequestSetter,
 } from '../hooks/use-request';
 import {
   GrpcRequestLoaderData,
@@ -186,6 +187,8 @@ export const Debug: FC = () => {
   const [isEnvironmentModalOpen, setEnvironmentModalOpen] = useState(false);
 
   const patchRequestMeta = useRequestMetaPatcher();
+  const patchRequest = useRequestSetter();
+
   useEffect(() => {
     db.onChange(async (changes: ChangeBufferEvent[]) => {
       for (const change of changes) {
@@ -617,7 +620,7 @@ export const Debug: FC = () => {
   const virtualizer = useVirtualizer<HTMLDivElement | null, Child>({
     getScrollElement: () => parentRef.current,
     count: visibleCollection.length,
-    estimateSize: React.useCallback(() => 32, []),
+    estimateSize: useCallback(() => 32, []),
     overscan: 30,
     getItemKey: index => visibleCollection[index].doc._id,
   });
@@ -977,7 +980,21 @@ export const Debug: FC = () => {
                             icon={item.collapsed ? 'folder' : 'folder-open'}
                           />
                         )}
-                        <span className="truncate">{getRequestNameOrFallback(item.doc)}</span>
+                        <span
+                          className="truncate"
+                          onDoubleClick={() => {
+                            showPrompt({
+                              title: 'Rename Request',
+                              defaultValue: item.doc.name,
+                              submitName: 'Rename',
+                              selectText: true,
+                              label: 'Name',
+                              onComplete: name => patchRequest(item.doc._id, { name }),
+                            });
+                          }}
+                        >
+                          {getRequestNameOrFallback(item.doc)}
+                        </span>
                         <span className="flex-1" />
                         {isWebSocketRequest(item.doc) && <WebSocketSpinner requestId={item.doc._id} />}
                         {isEventStreamRequest(item.doc) && <EventStreamSpinner requestId={item.doc._id} />}
@@ -1059,6 +1076,7 @@ export const Debug: FC = () => {
               <RequestSettingsModal
                 request={activeRequest}
                 onHide={() => setIsRequestSettingsModalOpen(false)}
+                focusOn="name"
               />
             )}
           </ErrorBoundary>

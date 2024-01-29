@@ -401,6 +401,7 @@ export const WebSocketRequestPane: FC<Props> = ({ environment }) => {
         <RequestSettingsModal
           request={activeRequest}
           onHide={() => setIsRequestSettingsModalOpen(false)}
+          focusOn='description'
         />
       )}
     </Pane>
